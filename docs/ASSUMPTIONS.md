@@ -8,6 +8,7 @@ Everything here is something the brief does not state and we had to decide. Each
 - **A patient is identified by mobile + name.** The brief shows no patient ID, and one mobile often covers a whole family.
 - **The LIS spells a patient's name the same way on every order.** Names are only trimmed and have repeated spaces collapsed before matching, so a different spelling would create a second patient.
 - **Mobiles are Indian numbers and are stored in E.164 (`+91XXXXXXXXXX`).** All centres are in Andhra Pradesh. One normalising function turns `98765 43210`, `09876543210` and `+91 98765 43210` into the same value.
+- **Only Indian mobiles are accepted. Landlines and foreign numbers are row errors.** Links and OTPs travel by WhatsApp/SMS, which a landline cannot receive. Staff must fix such rows in the LIS.
 - **The CSV status column holds only `Processing`, `Ready` or `Ready (critical)`.** These are the values in the sample. Anything else is a row error in the import preview.
 - **One CSV row is one result (one parameter of one order).** This matches the sample table.
 

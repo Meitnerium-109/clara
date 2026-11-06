@@ -24,6 +24,10 @@ Options were `Patient.consentAt` or a separate `Consent` table keyed by mobile. 
 
 The LIS has three states: Processing, Ready, Ready (critical). We store `status` (PROCESSING / READY) and `critical` (true/false) separately, so "is it signed?" and "is it critical?" are each a simple check in code. Being critical does not change whether a report is signed.
 
+## When an order counts as critical
+
+An order is critical if the LIS marks it `Ready (critical)` OR any of its results is flagged `CRITICAL_LOW` or `CRITICAL_HIGH` by our own rules. We trust either source, because calling a patient unnecessarily costs a few minutes of staff time, while missing a critical value could harm someone. This is applied during import.
+
 ## Results keep the raw text as well as parsed numbers
 
 Each result stores `valueText` and `refText` exactly as the LIS gave them, plus parsed `valueNum`, `refLow` and `refHigh` when parsing succeeds. Patients always see the lab's own text. Flags are computed from the parsed numbers. If parsing fails, the flag is `UNKNOWN` rather than a guess. We used `Float` rather than `Decimal` because values are only compared against ranges, never added up, and what patients see comes from the text.
@@ -59,3 +63,11 @@ Patient and staff sessions are signed httpOnly cookies, as set in CLAUDE.md, so 
 ## Indexes
 
 Postgres does not index foreign keys automatically, so we added indexes where the app looks things up: `Order.patientId`, `ReportLink.orderId`, `Message(to, createdAt)` for the demo phone, `OtpChallenge(mobile, createdAt)` for the rate limit, `AccessLog(orderId, at)` and `CallbackTask(status, createdAt)`. We did not add a separate index on `Patient.mobile` because the `(mobile, name)` unique index already covers mobile lookups.
+
+## Vitest 4, installed once with `--legacy-peer-deps`
+
+Vitest 5.1.0 was published four days before we installed it, so we chose the latest stable 4.x release (4.1.12) and pinned Vite 7.3.7 next to it. npm 10 crashed (`Cannot read properties of null (reading 'edgesOut')`) while following a chain of optional peer dependencies (Vite devtools, which in turn want any Vitest version). We don't use any of those packages. Installing once with `--legacy-peer-deps` skips that chain, and a plain `npm install` works afterwards, so no one else needs the flag.
+
+## Mobile normaliser returns a reason, not just null
+
+`normaliseMobile` returns either `{ ok: true, e164 }` or `{ ok: false, reason }`. The CSV import preview needs to tell staff *why* a row was rejected ("Not a valid 10-digit Indian mobile number"), so the reason comes straight from this function. Accepted forms: 10 digits starting 6–9, optionally with spaces, dashes, dots or brackets, and an optional `+91`, `91`, `0091` or leading `0` prefix.
