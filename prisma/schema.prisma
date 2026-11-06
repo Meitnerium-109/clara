@@ -1,5 +1,5 @@
 // Clara database schema.
-// Models are added in the next step, after the data model is agreed.
+// Decisions behind these models are explained in docs/DECISIONS.md.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,4 +11,276 @@ datasource db {
   url       = env("DATABASE_URL")
   // Direct connection: used by `prisma migrate`, which needs a session the pooler can't give.
   directUrl = env("DIRECT_URL")
+}
+
+// ---------- Enums ----------
+
+enum OrderStatus {
+  PROCESSING
+  READY // signed by the pathologist
+}
+
+enum ResultFlag {
+  NORMAL
+  LOW
+  HIGH
+  CRITICAL_LOW
+  CRITICAL_HIGH
+  UNKNOWN // value or range could not be parsed; never guessed
+}
+
+enum Language {
+  EN
+  TE
+  HI
+}
+
+enum SummarySource {
+  TEMPLATE
+  AI
+  FALLBACK
+  NONE // critical values get no summary
+}
+
+enum LinkReason {
+  SIGNOFF
+  RESEND
+}
+
+enum Channel {
+  WHATSAPP
+  SMS
+}
+
+enum MessageKind {
+  REPORT_LINK
+  OTP
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
+
+enum ActorType {
+  PATIENT
+  STAFF
+  SYSTEM
+}
+
+enum AccessAction {
+  LINK_OPENED
+  OTP_SENT
+  OTP_VERIFIED
+  OTP_FAILED
+  REPORT_VIEWED
+  PDF_DOWNLOADED
+  SUMMARY_FLAGGED
+  LINK_RESENT
+  CALLBACK_DONE
+}
+
+enum CallbackStatus {
+  OPEN
+  DONE
+}
+
+// ---------- Staff ----------
+
+model StaffUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+
+  linksCreated  ReportLink[]
+  callbacksDone CallbackTask[]
+  imports       ImportBatch[]
+  accessLogs    AccessLog[]
+}
+
+// ---------- Patients and consent ----------
+
+model Patient {
+  id        String   @id @default(cuid())
+  name      String // trimmed, spaces collapsed, as the LIS spells it
+  mobile    String // E.164, e.g. +919876543210
+  createdAt DateTime @default(now())
+
+  orders     Order[]
+  accessLogs AccessLog[]
+
+  // One mobile can hold a whole family. Mobile is the leading column,
+  // so this index also serves "all patients for this mobile" lookups.
+  @@unique([mobile, name])
+}
+
+// Consent belongs to the person holding the phone, so it is keyed by mobile,
+// not by patient. A new wording version means asking again.
+model Consent {
+  id             String   @id @default(cuid())
+  mobile         String // E.164
+  wordingVersion String
+  consentedAt    DateTime @default(now())
+
+  @@unique([mobile, wordingVersion])
+}
+
+// ---------- Orders and results ----------
+
+model Order {
+  id              String      @id @default(cuid())
+  lisOrderId      String      @unique // e.g. ORD-71204, from the LIS
+  patientId       String
+  referringDoctor String
+  status          OrderStatus
+  critical        Boolean     @default(false)
+  signedAt        DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  results      Result[]
+  links        ReportLink[]
+  messages     Message[]
+  accessLogs   AccessLog[]
+  callbackTask CallbackTask?
+
+  @@index([patientId])
+}
+
+model Result {
+  id        String     @id @default(cuid())
+  orderId   String
+  parameter String // e.g. "Haemoglobin"
+  unit      String // e.g. "g/dL"
+  valueText String // exactly as the LIS gave it; shown to the patient
+  valueNum  Float? // parsed number, null when non-numeric (e.g. "Positive")
+  refText   String // range exactly as the LIS gave it, e.g. "12.0-15.5"
+  refLow    Float?
+  refHigh   Float?
+  flag      ResultFlag
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  summaries Summary[]
+
+  // Import upserts on this key, so re-importing a file never duplicates rows.
+  @@unique([orderId, parameter])
+}
+
+model Summary {
+  id        String        @id @default(cuid())
+  resultId  String
+  language  Language
+  text      String
+  source    SummarySource
+  flaggedAt DateTime? // patient pressed "This explanation seems wrong"
+  flagNote  String?       @db.VarChar(500)
+  createdAt DateTime      @default(now())
+
+  result Result @relation(fields: [resultId], references: [id], onDelete: Cascade)
+
+  // Acts as the cache: each language is generated at most once per result.
+  @@unique([resultId, language])
+}
+
+// ---------- Delivery and security ----------
+
+model ReportLink {
+  id          String     @id @default(cuid())
+  orderId     String
+  tokenHash   String     @unique // SHA-256 of the token; the raw token is never stored
+  reason      LinkReason
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdById String? // staff member who resent; null for automatic sign-off links
+  createdAt   DateTime   @default(now())
+
+  order     Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdBy StaffUser? @relation(fields: [createdById], references: [id])
+
+  @@index([orderId])
+}
+
+model OtpChallenge {
+  id        String    @id @default(cuid())
+  mobile    String // E.164
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int       @default(0) // locked once this reaches 5
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  // Serves the rate limit (sends per mobile in the last 15 minutes)
+  // and finding the latest challenge for a mobile.
+  @@index([mobile, createdAt])
+}
+
+// Mock outbox: stands in for a WhatsApp/SMS provider.
+model Message {
+  id        String        @id @default(cuid())
+  to        String // E.164
+  channel   Channel
+  kind      MessageKind
+  body      String? // stored only when DEMO_MODE=true (it contains the raw link or OTP)
+  status    MessageStatus @default(QUEUED)
+  orderId   String?
+  dedupeKey String?       @unique // e.g. "signoff:ORD-71204": the database blocks a second send
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  order Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([to, createdAt])
+  @@index([orderId])
+}
+
+// ---------- Audit and operations ----------
+
+model AccessLog {
+  id          String       @id @default(cuid())
+  actorType   ActorType
+  staffUserId String?
+  patientId   String? // null when the actor is not yet known (link opened before OTP)
+  action      AccessAction
+  orderId     String?
+  at          DateTime     @default(now())
+
+  staffUser StaffUser? @relation(fields: [staffUserId], references: [id])
+  patient   Patient?   @relation(fields: [patientId], references: [id])
+  order     Order?     @relation(fields: [orderId], references: [id])
+
+  @@index([orderId, at])
+}
+
+model CallbackTask {
+  id        String         @id @default(cuid())
+  orderId   String         @unique // one task per critical order
+  reason    String
+  status    CallbackStatus @default(OPEN)
+  note      String?        @db.VarChar(1000)
+  doneById  String?
+  doneAt    DateTime?
+  createdAt DateTime       @default(now())
+
+  order  Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  doneBy StaffUser? @relation(fields: [doneById], references: [id])
+
+  @@index([status, createdAt])
+}
+
+model ImportBatch {
+  id          String   @id @default(cuid())
+  fileName    String
+  rowCount    Int
+  errorCount  Int
+  createdById String
+  createdAt   DateTime @default(now())
+
+  createdBy StaffUser @relation(fields: [createdById], references: [id])
 }
