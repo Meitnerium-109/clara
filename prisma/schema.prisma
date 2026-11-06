@@ -1,0 +1,14 @@
+// Clara database schema.
+// Models are added in the next step, after the data model is agreed.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection (Supabase pooler): used by the app at runtime.
+  url       = env("DATABASE_URL")
+  // Direct connection: used by `prisma migrate`, which needs a session the pooler can't give.
+  directUrl = env("DIRECT_URL")
+}
