@@ -71,3 +71,15 @@ Vitest 5.1.0 was published four days before we installed it, so we chose the lat
 ## Mobile normaliser returns a reason, not just null
 
 `normaliseMobile` returns either `{ ok: true, e164 }` or `{ ok: false, reason }`. The CSV import preview needs to tell staff *why* a row was rejected ("Not a valid 10-digit Indian mobile number"), so the reason comes straight from this function. Accepted forms: 10 digits starting 6–9, optionally with spaces, dashes, dots or brackets, and an optional `+91`, `91`, `0091` or leading `0` prefix.
+
+## Flags: one function, critical checked first
+
+`assessResult` is the single entry point that both the seed and the CSV import call for a result row, and its output maps straight onto the Result columns, so the rules exist in exactly one place. It checks critical limits before the reference range, so a dangerous potassium is caught even if the LIS sends a garbled range. Anything it can't parse becomes UNKNOWN rather than a guess. The LIS status text ("Ready (critical)") is parsed by a separate small function, `parseLisStatus`, because it's a different concern from result values.
+
+## bcryptjs instead of bcrypt
+
+Both implement the same bcrypt algorithm. `bcrypt` is a native C++ module that has to compile on install, which often fails on Vercel and Windows. `bcryptjs` is plain JavaScript, so it installs everywhere. It is slower per hash, but we hash only at login and seeding, so that doesn't matter. Cost factor 12.
+
+## Seed creates only LIS data
+
+The seed creates the staff user, patients, orders and results: what an import would produce. It does not create report links, messages or callback tasks. Those come from the real sign-off logic, so the demo runs that code rather than a fake copy of it. Every write is an upsert on a unique key, so running the seed twice changes nothing.

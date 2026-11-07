@@ -8,10 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:seed": "prisma db seed"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
+    "bcryptjs": "3.0.3",
     "next": "15.5.29",
     "react": "19.1.0",
     "react-dom": "19.1.0"
@@ -26,8 +28,12 @@
     "eslint-config-next": "15.5.29",
     "prisma": "6.19.3",
     "tailwindcss": "^4",
+    "tsx": "4.23.15",
     "typescript": "^5",
     "vite": "7.3.7",
     "vitest": "4.1.12"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
