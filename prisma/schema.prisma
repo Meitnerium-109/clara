@@ -102,6 +102,18 @@ model StaffUser {
   accessLogs    AccessLog[]
 }
 
+// One row per staff sign-in attempt. Failures in the last 15 minutes are
+// counted to lock out password guessing; successes double as a sign-in log.
+// Keyed by the typed email (no foreign key), so unknown emails are limited too.
+model StaffLoginAttempt {
+  id        String   @id @default(cuid())
+  email     String // lowercased, as typed
+  succeeded Boolean
+  at        DateTime @default(now())
+
+  @@index([email, at])
+}
+
 // ---------- Patients and consent ----------
 
 model Patient {

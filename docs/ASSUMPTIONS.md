@@ -4,6 +4,7 @@ Everything here is something the brief does not state and we had to decide. Each
 
 ## Data from the LIS
 
+- **The LIS CSV has these columns:** `order_id, patient_name, mobile, parameter, unit, result, reference_range, status, referring_doctor`. Separate parameter and unit columns avoid guessing where a name ends and a unit begins ("Vitamin D 25-OH ng/mL").
 - **The LIS CSV export includes a mobile column.** The sample table has none, but sending a link automatically is impossible without one.
 - **A patient is identified by mobile + name.** The brief shows no patient ID, and one mobile often covers a whole family.
 - **The LIS spells a patient's name the same way on every order.** Names are only trimmed and have repeated spaces collapsed before matching, so a different spelling would create a second patient.
@@ -39,4 +40,14 @@ Everything here is something the brief does not state and we had to decide. Each
 ## Demo data
 
 - **Everyone in the seed data is fictional, and mobiles use the placeholder range 90000 000xx.** The brief forbids real personal data, and no message is really sent because the outbox is mocked.
-- **The seed splits the sample's "Haemoglobin g/dL" column into parameter and unit.** The schema stores them separately. How the real CSV import splits them is decided in the import step.
+- **The seed stores parameter and unit separately** (the sample shows them together, e.g. "Haemoglobin g/dL"). This matches the CSV format we chose, which has separate columns.
+
+## Staff access
+
+- **A staff session lasts 8 hours (one shift), then staff sign in again.** The brief only says staff sessions are separate from patient ones.
+- **Front-desk staff are created by the seed or an administrator; there is no self-registration or password reset.** Both are out of scope for the take-home (see CUTS.md).
+
+## Wording
+
+- **The landing page's Telugu and Hindi taglines were AI-translated and need a native reviewer**, like the summary templates.
+- **A result we can't compare (flag UNKNOWN) is labelled "Ask doctor", never "Normal".** Showing nothing could read as "fine".

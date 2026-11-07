@@ -1,26 +1,109 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/*
+ * "Clara glass" design tokens. Every text/background pair used here was
+ * checked against WCAG AA (lowest ratio 5.4:1). See docs/DECISIONS.md.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Ink: deep blue-green near-black, plus a muted tone for secondary text. */
+  --color-ink: #0b2a2e;
+  --color-ink-muted: #46625f;
+
+  /* One accent, for primary actions and links. */
+  --color-accent: #0e6b6b;
+  --color-accent-strong: #0a5454;
+  --color-accent-soft: #dff1ef;
+
+  --color-paper: #ffffff;
+  --color-line: #cfe0e0;
+
+  /* Status colours: only for result flags, always with an icon and a word. */
+  --color-neutral-bg: #eef3f3;
+  --color-warn-bg: #fff3d6;
+  --color-warn-ink: #7a4a00;
+  --color-warn-line: #efc66b;
+  --color-danger-bg: #fde7e7;
+  --color-danger-ink: #8e1c1c;
+  --color-danger-line: #ef9a9a;
+
+  /* The browser picks a font per character: Latin from Noto Sans, Telugu and
+     Devanagari from their own Noto faces (each downloaded only when needed). */
+  --font-sans:
+    var(--font-noto-sans), var(--font-noto-telugu), var(--font-noto-devanagari), ui-sans-serif,
+    system-ui, sans-serif;
+
+  --radius-card: 1.25rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    background-color: #e4f3f2; /* shown before the gradient paints */
+    color: var(--color-ink);
+  }
+
+  /* Fixed gradient on a pseudo-element: cheaper than background-attachment: fixed,
+     which repaints on every scroll on many phones. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(160deg, #e3f4f1 0%, #e5eef9 100%);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Telugu and Devanagari have tall stacked vowel signs; give them room. */
+  :lang(te) {
+    line-height: 1.85;
+  }
+  :lang(hi) {
+    line-height: 1.75;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Patient screens: 18px base text. Staff screens keep the 16px default. */
+  .patient-scale {
+    font-size: 1.125rem;
+    line-height: 1.6;
+  }
+
+  /* Glass surface: only for a few large elements (main card, header, language
+     switch), never long lists, so low-end phones don't blur dozens of boxes. */
+  .glass {
+    background-color: rgb(255 255 255 / 0.72);
+    border: 1px solid rgb(255 255 255 / 0.8);
+    box-shadow:
+      0 1px 2px rgb(11 42 46 / 0.04),
+      0 8px 24px rgb(11 42 46 / 0.07);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+  }
+}
+
+/* Solid fallback: no blur support, or the user asked for less transparency. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background-color: var(--color-paper);
+    border-color: var(--color-line);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background-color: var(--color-paper);
+    border-color: var(--color-line);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }

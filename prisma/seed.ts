@@ -10,14 +10,13 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import { assessResult, isOrderCritical } from "../src/lib/flags";
 import { parseLisStatus } from "../src/lib/lisStatus";
 import { maskMobile, normaliseMobile } from "../src/lib/mobile";
 import { normalisePatientName } from "../src/lib/patientName";
+import { hashPassword } from "../src/server/password";
 import { SEED_ORDERS, type SeedOrder } from "./seed-data";
 
-const BCRYPT_COST = 12;
 const prisma = new PrismaClient();
 
 async function seedStaff() {
@@ -33,7 +32,7 @@ async function seedStaff() {
     throw new Error("SEED_STAFF_PASSWORD in .env is shorter than 12 characters");
   }
 
-  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
+  const passwordHash = await hashPassword(password);
   // Updating the hash means changing the password in .env and re-seeding just works.
   await prisma.staffUser.upsert({
     where: { email },

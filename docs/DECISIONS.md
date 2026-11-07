@@ -83,3 +83,39 @@ Both implement the same bcrypt algorithm. `bcrypt` is a native C++ module that h
 ## Seed creates only LIS data
 
 The seed creates the staff user, patients, orders and results: what an import would produce. It does not create report links, messages or callback tasks. Those come from the real sign-off logic, so the demo runs that code rather than a fake copy of it. Every write is an upsert on a unique key, so running the seed twice changes nothing.
+
+## CSV has separate parameter and unit columns
+
+Options were one combined column ("Haemoglobin g/dL", as in the sample) split by our code, or separate columns. Splitting by rule breaks on names with spaces or numbers ("Vitamin D 25-OH ng/mL"), so we chose separate columns: `order_id, patient_name, mobile, parameter, unit, result, reference_range, status, referring_doctor`.
+
+## Design tokens in Tailwind v4 `@theme`
+
+Colours, fonts and the card radius are defined once in `globals.css` as Tailwind theme tokens (`bg-accent`, `text-ink`, `rounded-card`), so every screen draws from the same small palette. Every text/background pair was checked against WCAG AA; the lowest is 5.4:1 (accent on soft accent). Muted text passes even on the bare background gradient, so text stays readable if the glass fails. Dark mode was removed: the brief doesn't ask for it, and one well-tested light theme is safer for elderly readers.
+
+## Glass only where it counts, with a solid fallback
+
+`.glass` (translucent white, 16px backdrop blur, light border) is used on the main card and the header only. Blur is expensive on low-end phones, so lists will use solid cards (`<Card surface="solid">`). If the browser can't blur, or the user has asked for reduced transparency, the card turns solid white with a visible border. The background gradient sits on a fixed pseudo-element rather than `background-attachment: fixed`, which repaints on every scroll on many phones.
+
+## Fonts: Noto, self-hosted, scripts loaded only when used
+
+`next/font` downloads Noto Sans, Noto Sans Telugu and Noto Sans Devanagari at build time and serves them from our own domain, so a patient's phone never contacts Google and we ship only the needed subsets. Only the Latin face is preloaded. The Telugu and Devanagari faces are declared with their Unicode ranges, so the browser downloads them only when a page actually shows those characters. Telugu and Hindi text get extra line height (1.85 and 1.75) for their stacked vowel signs.
+
+## Text size by audience, not by page
+
+Patient screens wrap content in `.patient-scale` (18px base). Staff screens keep 16px. Buttons have two explicit sizes, `md` (44px tall, staff) and `lg` (56px, full width, patient), so tap targets don't depend on the surrounding font size. All sizes are in rem, so a user's own browser text size is respected.
+
+## Staff sessions: signed JWT in an httpOnly cookie
+
+On sign-in we issue a JWT signed with HS256 and `SESSION_SECRET` (via jose), holding only the staff ID, and store it in an httpOnly, SameSite=Lax cookie (Secure in production) for 8 hours. httpOnly means page scripts can't read it, so a script-injection bug can't steal the session. Each token carries an audience (`staff` or `patient`), so a patient token can never pass as a staff session. The trade-off of a stateless token is that it can't be cancelled early on the server. Sign-out deletes the cookie, and every page re-checks that the staff account still exists. Server-side session revocation is in CUTS.md.
+
+## Two layers of access control
+
+Middleware checks the cookie's signature for every `/staff/*` request and redirects to sign-in if it's missing or invalid. It's fast and needs no database. It isn't the only check: Next.js can serve a cached layout without re-running it, and middleware has been bypassed in past Next.js vulnerabilities. So every staff page and server action also calls `requireStaff()`, which verifies the token and loads the staff account from the database.
+
+## Failed sign-in limit stored in the database
+
+Five failed attempts for one email within 15 minutes lock that email until the window passes. A success resets the count. On Vercel each request may run on a fresh instance, so an in-memory counter would reset constantly; instead each attempt is a row in `StaffLoginAttempt`, the same pattern as the OTP rate limit. Unknown emails are limited too, and an unknown email takes as long as a wrong password (we compare against a dummy bcrypt hash), so the form doesn't reveal which emails are staff accounts. Successful rows double as a staff sign-in log. The limit is per email, not per IP: IP addresses are personal data, and behind mobile carriers many people share one.
+
+## Server actions for forms
+
+Sign-in and sign-out are React server actions. The browser posts the form straight to server code, with no separate API route to secure. Next.js checks that the request comes from our own origin, which protects against cross-site request forgery. Sign-out is a POST form, not a link, so a link prefetch can't sign someone out.
