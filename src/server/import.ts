@@ -11,6 +11,7 @@ import { readLisCsv } from "@/lib/import/csv";
 import { buildImportPreview, orderIdsIn, type ExistingOrder, type ImportPreview, type OrderPlan } from "@/lib/import/preview";
 import { db } from "./db";
 import { deliverSignoff } from "./delivery";
+import { dispatchQueued } from "./outbox";
 
 type PreviewResult = { ok: true; preview: ImportPreview; fingerprint: string } | { ok: false; error: string };
 
@@ -49,6 +50,8 @@ export type CommitSummary = {
   rejectedRows: number;
   /** Orders signed by someone else between preview and commit; left untouched. */
   skipped: number;
+  /** Orders this import signed, for preparing their explanations afterwards. */
+  signedOrderIds: string[];
 };
 
 type CommitResult = { ok: true; summary: CommitSummary } | { ok: false; error: string; stale?: boolean };
@@ -76,6 +79,7 @@ export async function commitImport(
     callbacksCreated: 0,
     rejectedRows: preview.counts.REJECTED,
     skipped: 0,
+    signedOrderIds: [],
   };
 
   // One transaction per order: a failure in one order never half-saves it,
@@ -87,10 +91,14 @@ export async function commitImport(
       continue;
     }
     summary.ordersSaved += 1;
-    if (outcome.sent) summary.linksQueued += 1;
+    if (outcome.sent) {
+      summary.linksQueued += 1;
+      summary.signedOrderIds.push(outcome.orderId);
+    }
     if (outcome.callbackCreated) summary.callbacksCreated += 1;
   }
 
+  await dispatchQueued();
   await db.importBatch.create({
     data: { fileName, rowCount: preview.rows.length, errorCount: preview.counts.REJECTED, createdById: staffId },
   });
@@ -111,7 +119,7 @@ async function commitOrder(tx: Prisma.TransactionClient, plan: OrderPlan) {
       data: [{ orderId: current.id, reason: plan.callbackReason }],
       skipDuplicates: true,
     });
-    return { sent: false, callbackCreated: task.count === 1 };
+    return { sent: false, callbackCreated: task.count === 1, orderId: current.id };
   }
 
   if (current?.status === "READY") return "skipped" as const;
@@ -142,8 +150,8 @@ async function commitOrder(tx: Prisma.TransactionClient, plan: OrderPlan) {
     });
   }
 
-  if (!plan.signs) return { sent: false, callbackCreated: false };
-  return deliverSignoff(
+  if (!plan.signs) return { sent: false, callbackCreated: false, orderId: order.id };
+  const delivered = await deliverSignoff(
     tx,
     {
       id: order.id,
@@ -154,4 +162,5 @@ async function commitOrder(tx: Prisma.TransactionClient, plan: OrderPlan) {
     },
     now,
   );
+  return { ...delivered, orderId: order.id };
 }

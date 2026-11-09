@@ -16,6 +16,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { callbackReason, reportLinkUrl, reportReadyMessage, signoffDedupeKey } from "@/lib/messages";
 import { generateLinkToken, linkExpiresAt } from "@/lib/tokens";
 import { appUrl, isDemoMode } from "./config";
+import { dispatchQueued } from "./outbox";
 
 export type SignedOrder = {
   id: string;
@@ -99,5 +100,6 @@ export async function deliverPendingSignoffs(client: PrismaClient) {
     if (result.sent) sent += 1;
     if (result.callbackCreated) callbacks += 1;
   }
+  await dispatchQueued(client);
   return { sent, callbacks };
 }

@@ -89,8 +89,13 @@ export type PatientStrings = {
   noRange: string;
   downloadPdf: string;
   summaryTitle: string;
-  summaryPending: string;
+  summaryLoading: string;
   disclaimer: string;
+  flagButton: string;
+  flagNoteLabel: string;
+  flagSend: string;
+  flagCancel: string;
+  flagThanks: string;
   notReadyTitle: string;
   notReadyBody: string;
   allReports: string;
@@ -171,8 +176,13 @@ const en: PatientStrings = {
   noRange: "No normal range given",
   downloadPdf: "Download full report (PDF)",
   summaryTitle: "Simple explanation",
-  summaryPending: "A simple explanation of your results will appear here soon.",
+  summaryLoading: "Preparing a simple explanation…",
   disclaimer: "Explanation, not a diagnosis. Your doctor will advise you.",
+  flagButton: "This explanation seems wrong",
+  flagNoteLabel: "What seems wrong? (optional)",
+  flagSend: "Send",
+  flagCancel: "Cancel",
+  flagThanks: "Thank you. The lab will check this explanation.",
   notReadyTitle: "Your report is not ready yet",
   notReadyBody: "The lab is still testing your sample. We'll send you a message when it's ready.",
   allReports: "All reports",
@@ -253,8 +263,13 @@ const te: PatientStrings = {
   noRange: "సాధారణ పరిధి ఇవ్వలేదు",
   downloadPdf: "పూర్తి రిపోర్ట్ డౌన్‌లోడ్ చేయండి (PDF)",
   summaryTitle: "సులభమైన వివరణ",
-  summaryPending: "మీ ఫలితాల సులభమైన వివరణ త్వరలో ఇక్కడ కనిపిస్తుంది.",
+  summaryLoading: "సులభమైన వివరణ సిద్ధమవుతోంది…",
   disclaimer: "ఇది వివరణ మాత్రమే, రోగ నిర్ధారణ కాదు. మీ డాక్టర్ మీకు సలహా ఇస్తారు.",
+  flagButton: "ఈ వివరణ తప్పుగా అనిపిస్తోంది",
+  flagNoteLabel: "ఏది తప్పుగా అనిపిస్తోంది? (ఐచ్ఛికం)",
+  flagSend: "పంపండి",
+  flagCancel: "రద్దు చేయండి",
+  flagThanks: "ధన్యవాదాలు. ల్యాబ్ ఈ వివరణను తనిఖీ చేస్తుంది.",
   notReadyTitle: "మీ రిపోర్ట్ ఇంకా సిద్ధం కాలేదు",
   notReadyBody: "ల్యాబ్ ఇంకా మీ నమూనాను పరీక్షిస్తోంది. సిద్ధమైనప్పుడు మీకు మెసేజ్ పంపుతాము.",
   allReports: "అన్ని రిపోర్ట్‌లు",
@@ -335,8 +350,13 @@ const hi: PatientStrings = {
   noRange: "सामान्य सीमा नहीं दी गई",
   downloadPdf: "पूरी रिपोर्ट डाउनलोड करें (PDF)",
   summaryTitle: "आसान भाषा में",
-  summaryPending: "आपके नतीजों की आसान व्याख्या जल्द ही यहाँ दिखेगी।",
+  summaryLoading: "आसान व्याख्या तैयार हो रही है…",
   disclaimer: "यह व्याख्या है, निदान नहीं। आपके डॉक्टर आपको सलाह देंगे।",
+  flagButton: "यह व्याख्या गलत लगती है",
+  flagNoteLabel: "क्या गलत लगता है? (वैकल्पिक)",
+  flagSend: "भेजें",
+  flagCancel: "रद्द करें",
+  flagThanks: "धन्यवाद। लैब इस व्याख्या की जाँच करेगी।",
   notReadyTitle: "आपकी रिपोर्ट अभी तैयार नहीं है",
   notReadyBody: "लैब अभी आपके सैंपल की जाँच कर रही है। तैयार होने पर हम आपको संदेश भेजेंगे।",
   allReports: "सभी रिपोर्ट",

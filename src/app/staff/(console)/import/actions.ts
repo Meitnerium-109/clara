@@ -1,9 +1,11 @@
 "use server";
 
+import { after } from "next/server";
 import { z } from "zod";
 import type { PreviewRow, RowOutcome } from "@/lib/import/preview";
 import { commitImport, previewImport, type CommitSummary } from "@/server/import";
 import { requireStaff } from "@/server/staffSession";
+import { prepareEnglishSummaries } from "@/server/summaries";
 
 const MAX_FILE_BYTES = 1_000_000; // ~10,000 rows; a day's export is far smaller
 
@@ -72,7 +74,14 @@ export async function commitImportAction(formData: FormData): Promise<CommitActi
     const upload = await readUpload(formData);
     if (!upload.ok) return upload;
 
-    return await commitImport(upload.text, upload.name, staff.id, fingerprint.data);
+    const result = await commitImport(upload.text, upload.name, staff.id, fingerprint.data);
+    if (result.ok && result.summary.signedOrderIds.length > 0) {
+      // English explanations at sign-off, after the response is sent: AI calls
+      // never slow down the import. Failures only mean they're made on first view.
+      const ids = result.summary.signedOrderIds;
+      after(() => prepareEnglishSummaries(ids).catch((e) => logFailure("Preparing summaries", e)));
+    }
+    return result;
   } catch (error) {
     logFailure("Import commit", error);
     return {

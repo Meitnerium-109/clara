@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "AccessAction" ADD VALUE 'STAFF_VIEWED_ORDER';

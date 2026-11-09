@@ -80,6 +80,7 @@ enum AccessAction {
   SUMMARY_FLAGGED
   LINK_RESENT
   CALLBACK_DONE
+  STAFF_VIEWED_ORDER
 }
 
 enum CallbackStatus {

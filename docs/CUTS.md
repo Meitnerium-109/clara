@@ -15,3 +15,6 @@ What we left out on purpose, and what we would build next.
 - **Telugu/Hindi PDF.** The PDF is English only. Next: embed subsetted Noto fonts for a translated PDF, if the extra size is acceptable on weak data.
 - **Native-speaker review of all patient text**, including the consent wording.
 - **Rate-limit edge cases.** Two code requests at the very same moment could both pass the "3 per 15 minutes" count. Unknown numbers are never rate-limited, because nothing is sent to them, which is a small timing side channel. Next: a per-mobile row lock or counter, and a per-IP limit.
+- **Reviewing flagged explanations.** Staff can see flags but can't mark them reviewed or replace the text. Next: a review state, and turning frequently flagged AI explanations into new locked templates.
+- **A stronger AI safety check.** The banned-phrase list is a simple filter. Next: a second, independent check (another model, or a clinician-approved phrase list per test) before showing AI text.
+- **Search paging and resend limits.** Search returns the 50 most recent matches, and resend has no rate limit beyond the confirm step.

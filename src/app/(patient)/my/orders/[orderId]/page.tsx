@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { buttonClasses } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { StatusPill } from "@/components/ui/StatusPill";
@@ -11,6 +12,8 @@ import { requireConsent } from "@/server/consent";
 import { getLang } from "@/server/lang";
 import { reportForMobile } from "@/server/patientData";
 import { requirePatientMobile } from "@/server/patientSession";
+import { resultsNeedingSummary, summariesForReport } from "@/server/summaries";
+import { ResultSummary, SummaryLoading } from "./ResultSummary";
 
 export const metadata: Metadata = { title: "Report · Clara" };
 
@@ -43,6 +46,12 @@ export default async function ReportPage({ params }: { params: Promise<{ orderId
       </div>
     );
   }
+
+  // Started now, awaited inside each <Suspense> slot: the values render at once,
+  // explanations stream in as they're ready (templates instantly, AI in seconds).
+  const withSummary = new Set(resultsNeedingSummary(report, lang));
+  const summaries = summariesForReport(report, lang);
+  summaries.catch(() => {}); // a failure is handled where it's awaited
 
   return (
     <div className="flex flex-col gap-5">
@@ -84,22 +93,16 @@ export default async function ReportPage({ params }: { params: Promise<{ orderId
                   {r.valueText} <span className="text-xl font-normal text-ink-muted">{r.unit}</span>
                 </p>
                 <p className="mt-1 text-ink-muted">{r.refText ? t.normalRange(range) : t.noRange}</p>
+                {withSummary.has(r.id) && (
+                  <Suspense fallback={<SummaryLoading t={t} />}>
+                    <ResultSummary summaries={summaries} resultId={r.id} t={t} lang={lang} />
+                  </Suspense>
+                )}
               </li>
             );
           })}
         </ul>
       </section>
-
-      {/* Critical reports get no explanation: the lab calls instead. */}
-      {!report.critical && (
-        <section aria-labelledby="summary-heading" className="rounded-card border-2 border-dashed border-line p-5">
-          <h2 id="summary-heading" className="text-xl font-semibold">
-            {t.summaryTitle}
-          </h2>
-          <p className="mt-2 text-ink-muted">{t.summaryPending}</p>
-          <p className="mt-3 text-base text-ink-muted">{t.disclaimer}</p>
-        </section>
-      )}
 
       {/* A plain link, not next/link: a file download shouldn't be prefetched. */}
       <a href={`/my/orders/${report.id}/pdf`} className={buttonClasses({ size: "lg" })}>

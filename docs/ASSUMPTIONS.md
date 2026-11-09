@@ -68,6 +68,18 @@ Everything here is something the brief does not state and we had to decide. Each
 - **The downloadable PDF is English only.** It stands in for the LIS's signed PDF, which is in English today.
 - **The demo phone is open to anyone when DEMO_MODE is on.** That is the point for reviewers; DEMO_MODE must be off in any real deployment.
 
+## Explanations (the AI part)
+
+- **Only out-of-range results (Low or High) get an explanation.** The brief asks for a "summary of out-of-range values". Normal results need none, results we can't compare get none, and critical orders get none at all (the lab calls instead).
+- **The 8 locked templates and their Telugu/Hindi text were written and AI-translated by us, and need review by a clinician and native speakers.** They say only what the test measures and which side of the range the value is.
+- **What is sent to Gemini is not personal data.** Only test name, value, unit, range, direction and language: no name, number, ID, doctor or date. Google's servers are outside India, so this is how the AI step fits "hosting in India": nothing that identifies a person leaves our Mumbai database.
+- **The banned-phrase list is a safety net, not a guarantee.** It catches the obvious diagnosis and medicine words in three languages; locked templates for the common tests are the main protection.
+
+## Front desk
+
+- **Front-desk staff may see results and the full mobile number.** They answer patient calls today and phone critical results. Full numbers appear only when a staff member clicks "Show number to call", and each reveal is logged.
+- **Message delivery is mocked.** A queued message is immediately "sent" by a mock provider, and "delivered" once the demo phone shows it. A real gateway would report these itself.
+
 ## Staff access
 
 - **A staff session lasts 8 hours (one shift), then staff sign in again.** The brief only says staff sessions are separate from patient ones.

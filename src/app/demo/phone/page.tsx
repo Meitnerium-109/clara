@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { cn } from "@/lib/cn";
 import { isDemoMode } from "@/server/config";
 import { demoMessages, demoNumbers } from "@/server/demoPhone";
+import { markDelivered } from "@/server/outbox";
 import { AutoRefresh } from "./AutoRefresh";
 
 export const metadata: Metadata = { title: "Demo phone · Clara", robots: { index: false, follow: false } };
@@ -20,6 +21,8 @@ export default async function DemoPhonePage({ searchParams }: { searchParams: Pr
   const numbers = await demoNumbers();
   const selected = numbers.find((x) => x.key === n) ?? null;
   const messages = selected ? await demoMessages(selected.mobile) : [];
+  // The "phone" has now received these: staff see them as delivered.
+  await markDelivered(messages.map((m) => m.id));
 
   return (
     <div className="patient-scale mx-auto flex min-h-dvh max-w-xl flex-col gap-5 px-4 py-6">

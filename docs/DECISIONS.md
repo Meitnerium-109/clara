@@ -187,3 +187,57 @@ All pages send `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, a str
 ## Demo phone
 
 `/demo/phone` returns 404 unless `DEMO_MODE=true`. It lists the seeded numbers and shows each one's messages as a chat, with links clickable and refreshing every few seconds, so codes appear without reloading. The URL uses a short hash of the number, not the number itself.
+
+## Explanations: templates first, AI second, fallback always
+
+For each result, in order: critical order or value → no explanation; normal or not comparable → none; one of 8 locked templates → the template; otherwise Gemini. The order matters. The most common tests never depend on the AI, and the AI only ever sees results that are out of range but not critical. Templates are three sentences (where the value sits against the range, what the test measures, "your doctor will explain") and use the lab's own test name, so every language names the test exactly as the report does.
+
+## Validating AI output, and testing the templates against the same rules
+
+AI output must be JSON `{ "summary": string }`, 20–400 characters, must contain the test name, and must not contain any of a list of diagnosis, condition, medicine and reassurance words in English, Telugu and Hindi, or a link or phone number. Anything else becomes the fallback text: a missing explanation is safe, a wrong one isn't. A test renders every template (8 tests × 2 directions × 3 languages) and runs it through the same validator, so the locked text can never break the rules the AI is held to.
+
+## When an explanation is saved
+
+Explanations are cached in `Summary`, unique per result and language, with their source (TEMPLATE, AI or FALLBACK). A fallback caused by bad AI output is saved: asking again costs money and would likely fail the same way. A fallback caused by a timeout, outage or missing key is not saved, so the next view tries again. English is prepared right after an import signs the order, using Next.js `after()` so the staff member isn't kept waiting. Telugu and Hindi are made the first time someone asks. Simultaneous first views can't create duplicates, because inserts skip conflicts on the unique index.
+
+## Explanations stream in; the report never waits for the AI
+
+On the report page, values, ranges and flags render immediately. Each explanation sits in its own `<Suspense>` slot that fills in when ready: templates instantly, the AI within its 8-second timeout. On a weak connection the patient reads their results while the explanation loads, and any failure shows the fallback text in that slot instead of breaking the page.
+
+## Gemini over plain fetch
+
+One POST with the key in a header, never in the URL, an 8-second timeout, temperature 0.2, JSON output mode with a schema, and the thinking step turned off for speed. No SDK means one fewer dependency, and tests can swap in a fake `fetch`. The request body is built only by `buildPrompt`, which picks fields by name, so a test can prove that names, numbers and IDs never reach it, even when the caller passes a full database row.
+
+## "This explanation seems wrong"
+
+Patients can flag any saved explanation (not the fallback), with an optional note of up to 500 characters. The flag only works for explanations on reports belonging to the signed-in phone, and each flag writes a `SUMMARY_FLAGGED` access-log row. Staff see all flags on one page, with the text, source, language and the patient's note.
+
+## Delivery status staff can trust
+
+Each order shows one stage: Not signed, Queued, Sent, Delivered, Opened (or No link / Failed). The first four come from the message, and "Opened" from the access log: the patient viewed the report *after* the latest link was sent, so a resend resets it. Because there is no real gateway, a mock provider marks queued messages Sent, and the demo phone marks them Delivered when it shows them.
+
+## Resend
+
+Resend is a two-step button that shows the masked number first, so staff can spot a wrong number and fix it in the LIS instead of sending again. In one transaction it revokes every live link for the order, creates a new 72-hour link and message, and logs `LINK_RESENT` with the staff member's ID. The link list on the order page shows who created each link.
+
+## Callbacks
+
+Open callback tasks are listed longest-waiting first, with the reason (e.g. "Potassium 6.8 mmol/L (critically high)"). The full number appears only after "Show number to call", which is logged. "Mark as called" with an optional note is a conditional update (only while open), so a double click or two staff members can't record it twice.
+
+## Staff search without personal data in URLs
+
+Search by name, order ID or 4+ digits of the mobile (any format) runs as a server action rather than `?q=`, so a patient's name or number never lands in browser history or server logs. Results show masked mobiles, and the staff query functions never return a full number at all (only `revealCallbackNumber` does, and it logs). Testing found the full number inside the page's data in development: React 19's dev mode records awaited database results for its DevTools. A production build had none, but stripping raw numbers in the data layer means no page can ever carry one. Opening an order writes a `STAFF_VIEWED_ORDER` access-log row, so the log covers staff as well as patients.
+
+## Gemini model: a setting, chosen by measurement
+
+CLAUDE.md first fixed `gemini-2.5-flash`, but Google no longer offers it to new API keys (it returns 404 and suggests `gemini-3.8-flash`). Pragati chose to make the model a setting (`GEMINI_MODEL`) and pick the default by testing, rather than hard-coding Google's suggestion. Each candidate got the real request with the 8-second timeout and our validator:
+
+| Model | Thinking off | Result |
+|---|---|---|
+| gemini-3.8-flash | yes / no | timed out (8 s) |
+| gemini-3.7-flash | yes / no | timed out (8 s) |
+| gemini-flash-latest | yes / no | timed out (8 s) |
+| **gemini-3.5-flash** | **yes** | **valid, about 1.4 s** |
+| gemini-3.5-flash | no | invalid JSON (the thinking step used up the output allowance) |
+
+On `gemini-3.5-flash`, 9 of 9 explanations across 3 tests and 3 languages were valid. The 4 that first fell back were almost certainly the free tier's rate limit, not bad output: they failed in under 0.6 seconds, too fast for the model to have answered, while 9 calls were fired back to back, and spaced 5 seconds apart all 4 passed. (Their HTTP status wasn't captured.) Rate-limited calls aren't cached, so the next view retries, and every success is cached, so each explanation costs one call ever. A moving alias like `flash-latest` was not chosen as the default because behaviour could change without a code change. Swapping models later is one environment variable.

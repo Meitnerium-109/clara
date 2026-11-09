@@ -22,6 +22,7 @@ import { sessionKey } from "@/lib/session";
 import { logAccess } from "./accessLog";
 import { isDemoMode } from "./config";
 import { db } from "./db";
+import { dispatchQueued } from "./outbox";
 
 const key = () => otpKey(sessionKey(process.env.SESSION_SECRET));
 
@@ -53,6 +54,7 @@ export async function sendOtp(mobile: string, context: Context = {}): Promise<Se
       data: { to: mobile, channel: "SMS", kind: "OTP", body: isDemoMode() ? otpMessage(code) : null, orderId: context.orderId },
     }),
   ]);
+  await dispatchQueued();
   await logAccess({ actorType: "PATIENT", action: "OTP_SENT", ...context });
   return { ok: true };
 }

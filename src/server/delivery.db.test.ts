@@ -78,6 +78,7 @@ describe.skipIf(!RUN)("sign-off delivery against the database", { timeout: 120_0
 
     const first = await importFile(file);
     expect(first).toMatchObject({ ordersSaved: 3, linksQueued: 2, callbacksCreated: 1 });
+    expect(first.signedOrderIds).toHaveLength(2);
 
     const second = await importFile(file);
     expect(second).toMatchObject({ ordersSaved: 0, linksQueued: 0, callbacksCreated: 0 });
@@ -156,6 +157,6 @@ describe.skipIf(!RUN)("sign-off delivery against the database", { timeout: 120_0
     await importFile(csv([READY]));
     const message = await db.message.findUniqueOrThrow({ where: { dedupeKey: signoffDedupeKey("TEST-DB-1") } });
     expect(message.body).toBeNull();
-    expect(message).toMatchObject({ to: MOBILE, kind: "REPORT_LINK", status: "QUEUED" });
+    expect(message).toMatchObject({ to: MOBILE, kind: "REPORT_LINK", status: "SENT" }); // accepted by the mock provider
   });
 });

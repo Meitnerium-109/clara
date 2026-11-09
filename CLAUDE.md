@@ -59,7 +59,7 @@ Sample data (seed from this; extend with more realistic, clearly fake rows):
 | ORM | Prisma | Typed queries, migrations, easy seeding |
 | Validation | Zod on every input (forms, CSV rows, API bodies, AI output) | Basic security requirement |
 | Auth | Custom: staff email + password (bcrypt); patients link + OTP. Sessions are signed httpOnly cookies (jose) | OTP flow is the "hard part" they want to see built, not outsourced |
-| AI | Google Gemini (`gemini-2.5-flash`) via REST/SDK, key in env only | Pragati has used it; good Telugu/Hindi |
+| AI | Google Gemini (`gemini-3.5-flash` by default, `GEMINI_MODEL` to override) via REST, key in env only | Pragati has used it; good Telugu/Hindi. Changed from `gemini-2.5-flash`, which Google no longer offers to new keys (see DECISIONS.md) |
 | Tests | Vitest for logic; one Playwright smoke test if time allows | Tests for the most important logic |
 | Deploy | Vercel, functions pinned to Mumbai (`bom1`) | Free, fast, India region |
 | Messages | Mocked: an Outbox table + a "demo phone" screen | Brief says mock outside systems |
