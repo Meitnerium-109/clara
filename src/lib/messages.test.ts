@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { callbackReason, reportLinkUrl, reportReadyMessage, signoffDedupeKey } from "./messages";
+import { callbackReason, otpMessage, reportLinkUrl, reportReadyMessage, signoffDedupeKey } from "./messages";
 
 describe("signoffDedupeKey", () => {
   it("is one fixed key per order", () => {
@@ -46,5 +46,14 @@ describe("callbackReason", () => {
     expect(callbackReason([{ parameter: "LDL", valueText: "142", unit: "mg/dL", flag: "HIGH" }])).toBe(
       "Marked critical by the LIS",
     );
+  });
+});
+
+describe("otpMessage", () => {
+  it("contains the code, the expiry and a do-not-share warning", () => {
+    const body = otpMessage("042817");
+    expect(body).toContain("042817");
+    expect(body).toContain("5 minutes");
+    expect(body).toMatch(/Do not share/);
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateLinkToken, hashToken, LINK_TTL_MS, linkExpiresAt, linkStatus } from "./tokens";
+import { checkLink, generateLinkToken, hashToken, isWellFormedToken, LINK_TTL_MS, linkExpiresAt, linkStatus } from "./tokens";
 
 describe("generateLinkToken", () => {
   it("makes a 43-character URL-safe token (32 random bytes)", () => {
@@ -47,4 +47,26 @@ describe("link expiry", () => {
     const revokedAt = new Date("2026-11-08T10:00:00Z");
     expect(linkStatus({ expiresAt, revokedAt }, new Date("2026-11-20T00:00:00Z"))).toBe("REVOKED");
   });
+});
+
+describe("isWellFormedToken", () => {
+  it("accepts a generated token", () => {
+    expect(isWellFormedToken(generateLinkToken().token)).toBe(true);
+  });
+
+  it.each(["", "short", "a".repeat(42), "a".repeat(44), `${"a".repeat(42)}=`, `${"a".repeat(42)}/`, `${"a".repeat(42)}.`])(
+    "rejects %j",
+    (token) => expect(isWellFormedToken(token)).toBe(false),
+  );
+});
+
+describe("checkLink", () => {
+  const now = new Date("2026-11-09T10:00:00Z");
+  const expiresAt = new Date("2026-11-10T10:00:00Z");
+
+  it("NOT_FOUND when no link has this hash", () => expect(checkLink(null, now)).toBe("NOT_FOUND"));
+  it("VALID when not expired or revoked", () => expect(checkLink({ expiresAt, revokedAt: null }, now)).toBe("VALID"));
+  it("EXPIRED after 72 hours", () => expect(checkLink({ expiresAt, revokedAt: null }, expiresAt)).toBe("EXPIRED"));
+  it("REVOKED after a resend", () =>
+    expect(checkLink({ expiresAt, revokedAt: new Date("2026-11-09T09:00:00Z") }, now)).toBe("REVOKED"));
 });

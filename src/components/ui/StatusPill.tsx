@@ -13,8 +13,15 @@ const STYLES: Record<ResultFlag, { label: string; Icon: typeof CheckIcon; classN
   UNKNOWN: { label: "Ask doctor", Icon: QuestionIcon, className: "bg-neutral-bg text-ink-muted border-line" },
 };
 
-export function StatusPill({ flag, className }: { flag: ResultFlag; className?: string }) {
-  const { label, Icon, className: colours } = STYLES[flag];
+type StatusPillProps = {
+  flag: ResultFlag;
+  /** Translated word for patient screens; defaults to English. */
+  label?: string;
+  className?: string;
+};
+
+export function StatusPill({ flag, label, className }: StatusPillProps) {
+  const { label: englishLabel, Icon, className: colours } = STYLES[flag];
   return (
     <span
       className={cn(
@@ -24,7 +31,7 @@ export function StatusPill({ flag, className }: { flag: ResultFlag; className?: 
       )}
     >
       <Icon className="h-[1.1em] w-[1.1em]" />
-      {label}
+      {label ?? englishLabel}
     </span>
   );
 }

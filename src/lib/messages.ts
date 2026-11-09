@@ -28,6 +28,14 @@ export function reportReadyMessage(url: string): string {
   ].join("\n");
 }
 
+// Telugu line was AI-translated; see docs/ASSUMPTIONS.md.
+export function otpMessage(code: string): string {
+  return [
+    `Clara code: ${code}. It expires in 5 minutes. Do not share it with anyone, including lab staff.`,
+    `Clara కోడ్: ${code}. ఇది 5 నిమిషాల్లో ముగుస్తుంది. ఎవరితోనూ పంచుకోవద్దు.`,
+  ].join("\n");
+}
+
 type ResultSummary = { parameter: string; valueText: string; unit: string; flag: ResultFlag };
 
 /** What staff read on the callback task: which values are critical and which way. */

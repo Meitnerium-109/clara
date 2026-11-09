@@ -27,6 +27,7 @@ function existing(overrides: Partial<ExistingOrder> = {}): ExistingOrder {
   return {
     lisOrderId: "ORD-1",
     status: "READY",
+    critical: false,
     referringDoctor: "Dr. S. Ramanaiah",
     patient: { name: "Lakshmi Prasanna K", mobile: "+919000000001" },
     results: [{ parameter: "Haemoglobin", unit: "g/dL", valueText: "10.2", refText: "12.0-15.5", flag: "LOW" }],
@@ -41,11 +42,13 @@ function afterCommit(preview: ImportPreview, before: ExistingOrder[] = []): Exis
     const order = byId.get(plan.lisOrderId) ?? {
       lisOrderId: plan.lisOrderId,
       status: plan.status,
+      critical: plan.critical,
       referringDoctor: plan.referringDoctor,
       patient: { name: plan.patientName, mobile: plan.mobile },
       results: [],
     };
     order.status = plan.status;
+    order.critical = plan.critical;
     order.referringDoctor = plan.referringDoctor;
     for (const r of plan.results) {
       order.results = [...order.results.filter((x) => x.parameter !== r.parameter), r];
@@ -221,6 +224,42 @@ describe("signed orders are frozen", () => {
   it("rejects a changed referring doctor on a signed order", () => {
     const preview = buildImportPreview([row({ referring_doctor: "Dr. New" })], [existing()]);
     expect(preview.rows[0].note).toBe("A signed report can't be changed by import (doctor was Dr. S. Ramanaiah)");
+  });
+});
+
+describe("a signed order re-sent as critical", () => {
+  it("is marked critical with a callback task when the values are unchanged", () => {
+    const preview = buildImportPreview([row({ status: "Ready (critical)" })], [existing()]);
+    expect(preview.rows[0]).toMatchObject({
+      outcome: "UPDATED",
+      note: "Marked critical by the LIS: a callback task will be created",
+    });
+    expect(preview.plans).toEqual([
+      expect.objectContaining({ kind: "MARK_CRITICAL", lisOrderId: "ORD-1", critical: true, signs: false, results: [] }),
+    ]);
+  });
+
+  it("names the LIS as the reason when no value crosses our limits", () => {
+    const preview = buildImportPreview([row({ status: "Ready (critical)" })], [existing()]);
+    expect(preview.plans[0].callbackReason).toBe("Marked critical by the LIS");
+  });
+
+  it("is still rejected when a value also changed", () => {
+    const preview = buildImportPreview([row({ status: "Ready (critical)", result: "10.8" })], [existing()]);
+    expect(preview.rows[0].outcome).toBe("REJECTED");
+    expect(preview.plans).toEqual([]);
+  });
+
+  it("is UNCHANGED when the order is already critical", () => {
+    const preview = buildImportPreview([row({ status: "Ready (critical)" })], [existing({ critical: true })]);
+    expect(outcomes(preview)).toEqual(["UNCHANGED"]);
+    expect(preview.plans).toEqual([]);
+  });
+
+  it("is a no-op the second time", () => {
+    const first = buildImportPreview([row({ status: "Ready (critical)" })], [existing()]);
+    const second = buildImportPreview([row({ status: "Ready (critical)" })], afterCommit(first, [existing()]));
+    expect(second.plans).toEqual([]);
   });
 });
 

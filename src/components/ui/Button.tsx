@@ -24,7 +24,8 @@ const SIZES: Record<Size, string> = {
 
 type StyleProps = { variant?: Variant; size?: Size };
 
-function buttonClasses({ variant = "primary", size = "md" }: StyleProps, className?: string) {
+/** The button look, for elements that can't be <Button> (e.g. a plain download link). */
+export function buttonClasses({ variant = "primary", size = "md" }: StyleProps, className?: string) {
   return cn(BASE, VARIANTS[variant], SIZES[size], className);
 }
 

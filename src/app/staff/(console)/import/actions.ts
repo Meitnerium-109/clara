@@ -51,7 +51,7 @@ export async function previewImportAction(formData: FormData): Promise<PreviewAc
         counts: preview.counts,
         ordersToSave: preview.plans.length,
         linksToSend: preview.plans.filter((p) => p.signs).length,
-        criticalOrders: preview.plans.filter((p) => p.signs && p.critical).length,
+        criticalOrders: preview.plans.filter((p) => p.critical && (p.signs || p.kind === "MARK_CRITICAL")).length,
         fingerprint,
       },
     };

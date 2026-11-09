@@ -143,3 +143,47 @@ The seed now only creates missing rows and never overwrites, so re-seeding can't
 ## papaparse for CSV
 
 Real LIS exports come from Excel-like tools: quoted commas in Indian numbers, Windows line endings, byte-order marks. papaparse is a widely used, tested parser for these cases, so we don't hand-roll one. It runs only on the server; the screen imports the column list from a separate tiny file, so the parser never reaches the browser.
+
+## A signed order re-sent as "Ready (critical)" creates a callback task
+
+If the LIS re-exports a signed order with identical values but now marks it "Ready (critical)", the import marks the order critical and creates a callback task instead of rejecting the row. Rejecting it would hide a possible emergency behind an import error that staff might not read closely. Accepting it changes nothing the patient has already seen: values, results and doctor stay frozen, and no second link is sent. If any value also changed, the row is still rejected as an amendment. The plan has its own kind (`MARK_CRITICAL`), so the commit can only set the flag and add the task, never touch results. It is idempotent like everything else: the task is unique per order.
+
+## OTP codes: keyed hash, atomic attempts, single use
+
+Codes are 6 digits from `crypto.randomInt`, stored as an HMAC-SHA256 keyed with a secret derived from `SESSION_SECRET`, with the challenge ID mixed in. A plain SHA-256 would be pointless: there are only a million codes, so anyone who saw the database could try them all in a second. Checking a code is two conditional database updates. First "claim an attempt" (attempts + 1 only while unused, unexpired and under 5), then "spend the code" (only while unused). So ten guesses arriving at once still stop at five, and two tabs submitting the right code at once still let exactly one through. Database tests prove both. Only the newest code for a mobile counts, so a resend makes older codes useless.
+
+## One place for patient access control
+
+Every read of patient data goes through `src/server/patientData.ts`, and every query there has the signed-in mobile in its WHERE clause (`patient: { mobile }`). IDs in the URL only say which record; the database won't return it unless it belongs to this phone. If it doesn't, the patient sees the same "We couldn't find this report" page as for an ID that doesn't exist, so we never confirm that someone else's report exists. Results of an unsigned order are never even loaded. Database tests cover two phones, a family sharing a phone, unsigned orders and made-up IDs; an HTTP check confirmed another phone's report and PDF both return "not found".
+
+## Patient session: the mobile, in a signed cookie, 30-minute idle
+
+The patient session cookie (`clara_patient`) holds only the verified mobile, signed with the `patient` audience so a staff token can't be used in its place, and the reverse. Middleware re-issues it on every page view (GET only, so it never undoes a sign-out action) for a 30-minute idle timeout. Opening a report link from a browser that already verified the same phone goes straight to the report; any other browser must enter a code. The link proves which report; the code proves who holds the phone now.
+
+## Sign-in doesn't reveal who is a patient
+
+`/login` gives the same answer, "If this number has reports with us, we've sent a code", whether or not the number is known. A code is only actually sent when there is something to see. Otherwise anyone could type numbers to find out who has had tests at the lab, which is health information in itself.
+
+## Consent before any health data
+
+After the code, and before any report, the patient sees the consent screen if this mobile hasn't agreed to the current wording version. The record stores mobile, version and time, and keeps the first time if agreed again. Consent is per phone, since the person holding the phone is the one agreeing, often for the family. Every patient page and the PDF route check it.
+
+## Access log is written before data is shown
+
+Link opens, code sends/failures/successes, report views and PDF downloads each write an `AccessLog` row with IDs only. The write is awaited before the page is returned: if the log can't be written, the page fails rather than showing health data unrecorded.
+
+## PDF built on request, never stored
+
+The PDF is generated from the stored results each time it is requested, by a route that checks the session, consent and ownership, logs the download, and sends `Cache-Control: private, no-store`. There is no file URL that could be shared or guessed. It uses the PDF standard fonts (no embedded font files) to stay around 2 KB on weak data; characters those fonts can't draw are replaced. That is why it is English only. pdf-lib's last release was in 2021: it is stable and widely used, but no longer actively maintained, which we would revisit for production.
+
+## Language: a cookie, a glass switch, translated screens
+
+The EN / తెలుగు / हिंदी switch is a plain form posting to a server action, so it works without JavaScript. It stores the choice in a cookie, which is not personal data, and every patient screen reads it. The switch labels use the system font, so showing "తెలుగు" on an English page doesn't download the Telugu web font. The font loads only when Telugu text is actually shown. Pages set `lang`, so Telugu and Hindi get their extra line height.
+
+## Security headers
+
+All pages send `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, a strict referrer policy, a restrictive `Permissions-Policy` and HSTS. Report link pages (`/r/...`) send `Referrer-Policy: no-referrer`, so the secret token in the URL never leaks to another site. Patient pages are marked `noindex`.
+
+## Demo phone
+
+`/demo/phone` returns 404 unless `DEMO_MODE=true`. It lists the seeded numbers and shows each one's messages as a chat, with links clickable and refreshing every few seconds, so codes appear without reloading. The URL uses a short hash of the number, not the number itself.

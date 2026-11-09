@@ -53,11 +53,20 @@ Everything here is something the brief does not state and we had to decide. Each
 
 - **An order is imported all-or-nothing.** If any row of an order is rejected, none of its rows are saved, so a report is never signed with a result missing.
 - **Import never deletes.** A result stored earlier but missing from a later file is kept; the LIS export may cover only part of an order.
-- **Every change to a signed report is rejected, including a later "Ready (critical)" marking.** Amended reports are a cut. Our own critical rules still run on every value at sign-off.
+- **Every change to a signed report's values, results or doctor is rejected.** Amended reports are a cut. The one exception is a later "Ready (critical)" marking with unchanged values, which creates a callback task (see DECISIONS.md).
 - **An existing order can't move to a different patient or mobile by import.** That is how wrong-number deliveries happen; staff must fix it in the LIS.
 - **The report-ready message has no name or test details.** If the number is wrong, the stranger learns nothing, and opening the link still needs an OTP sent to that phone.
 - **Report links go by WhatsApp first.** The channel is stored per message, so SMS can be added.
 - **The message's Telugu line was AI-translated** and needs a native reviewer.
+
+## Patient access
+
+- **Patient screens are in English, Telugu and Hindi; the Telugu and Hindi text (including the consent wording) was AI-translated and must be checked by native speakers.** The brief asks for a report page that reads well in Telugu, and the DPDP Act expects consent notices in a language the person understands.
+- **The consent wording is version `2026-11-v1`.** Changing the text means bumping the version, so everyone is asked again.
+- **Sign-in codes go by SMS, report links by WhatsApp.** SMS is the usual channel for codes and works on any phone. Both are mocked in the outbox.
+- **A patient session lasts 30 minutes without activity.** Each page view extends it; there is no absolute maximum yet (see CUTS.md).
+- **The downloadable PDF is English only.** It stands in for the LIS's signed PDF, which is in English today.
+- **The demo phone is open to anyone when DEMO_MODE is on.** That is the point for reviewers; DEMO_MODE must be off in any real deployment.
 
 ## Staff access
 

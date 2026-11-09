@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
+import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { isDemoMode } from "@/server/config";
+
+export const dynamic = "force-dynamic"; // DEMO_MODE is read at request time
 
 export default function HomePage() {
   return (
@@ -24,12 +28,21 @@ export default function HomePage() {
             enter the code we send you, and your report will open.
           </p>
         </div>
+
+        <ButtonLink href="/login" size="lg" className="mt-8">
+          See my reports
+        </ButtonLink>
       </Card>
 
-      <p className="mt-8 text-center text-base">
+      <p className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-base">
         <Link href="/staff/login" className="text-accent underline underline-offset-4">
           Lab staff sign in
         </Link>
+        {isDemoMode() && (
+          <Link href="/demo/phone" className="text-accent underline underline-offset-4">
+            Demo phone (for reviewers)
+          </Link>
+        )}
       </p>
     </main>
   );

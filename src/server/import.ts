@@ -21,6 +21,7 @@ async function loadExistingOrders(orderIds: string[]): Promise<ExistingOrder[]> 
     select: {
       lisOrderId: true,
       status: true,
+      critical: true,
       referringDoctor: true,
       patient: { select: { name: true, mobile: true } },
       results: { select: { parameter: true, unit: true, valueText: true, refText: true, flag: true } },
@@ -101,7 +102,18 @@ async function commitOrder(tx: Prisma.TransactionClient, plan: OrderPlan) {
 
   // Re-check inside the transaction: if the order was signed since the
   // preview, the "signed reports never change" rule still holds.
-  const current = await tx.order.findUnique({ where: { lisOrderId: plan.lisOrderId }, select: { status: true } });
+  const current = await tx.order.findUnique({ where: { lisOrderId: plan.lisOrderId }, select: { id: true, status: true } });
+
+  if (plan.kind === "MARK_CRITICAL") {
+    if (current?.status !== "READY") return "skipped" as const;
+    await tx.order.update({ where: { id: current.id }, data: { critical: true } });
+    const task = await tx.callbackTask.createMany({
+      data: [{ orderId: current.id, reason: plan.callbackReason }],
+      skipDuplicates: true,
+    });
+    return { sent: false, callbackCreated: task.count === 1 };
+  }
+
   if (current?.status === "READY") return "skipped" as const;
 
   const patient = await tx.patient.upsert({

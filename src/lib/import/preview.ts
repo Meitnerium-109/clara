@@ -8,6 +8,8 @@
  *  2. An order is all-or-nothing: one bad row rejects all its rows, so a
  *     report is never signed with a result missing.
  *  3. A signed order can't change, gain results or go back to Processing.
+ *     One exception, for safety: an unchanged signed order re-sent as
+ *     "Ready (critical)" is marked critical and gets a callback task.
  *  4. An existing order can't move to a different patient or mobile.
  *  5. Nothing is ever deleted: results missing from the file are kept.
  */
@@ -25,6 +27,7 @@ import type { RawRow } from "./csv";
 export type ExistingOrder = {
   lisOrderId: string;
   status: "PROCESSING" | "READY";
+  critical: boolean;
   referringDoctor: string;
   patient: { name: string; mobile: string };
   results: Array<{ parameter: string; unit: string; valueText: string; refText: string; flag: ResultFlag }>;
@@ -54,6 +57,8 @@ export type ResultPlan = AssessedResult & {
 };
 
 export type OrderPlan = {
+  /** SAVE: create or update the order. MARK_CRITICAL: a signed order only gains a callback task. */
+  kind: "SAVE" | "MARK_CRITICAL";
   lisOrderId: string;
   patientName: string;
   mobile: string; // E.164
@@ -227,9 +232,7 @@ function previewOrder(rows: CheckedRow[], existing: ExistingOrder | undefined): 
       return { plan: null, rows: rejectAll(rows, () => "A signed report can't go back to Processing") };
     }
     const doctorChanged = existing.referringDoctor !== head.doctor;
-    return {
-      plan: null,
-      rows: rows.map((row, i) => {
+    const frozenRows = rows.map((row, i) => {
         const old = existingResult(valid[i].result.parameter);
         if (!old) return previewRow(row, "REJECTED", "Can't add a result to a signed report");
         if (!sameResult(old, valid[i].result)) {
@@ -239,8 +242,32 @@ function previewOrder(rows: CheckedRow[], existing: ExistingOrder | undefined): 
           return previewRow(row, "REJECTED", `A signed report can't be changed by import (doctor was ${existing.referringDoctor})`);
         }
         return previewRow(row, "UNCHANGED", null);
-      }),
-    };
+    });
+
+    // Safety exception: values identical, but the LIS now marks it critical.
+    const newlyCritical = head.lisCritical && !existing.critical;
+    if (newlyCritical && frozenRows.every((row) => row.outcome === "UNCHANGED")) {
+      return {
+        rows: frozenRows.map((row) => ({
+          ...row,
+          outcome: "UPDATED" as const,
+          note: "Marked critical by the LIS: a callback task will be created",
+        })),
+        plan: {
+          kind: "MARK_CRITICAL",
+          lisOrderId: head.orderId,
+          patientName: head.patientName,
+          mobile: head.mobile,
+          referringDoctor: head.doctor,
+          status: "READY",
+          critical: true,
+          signs: false,
+          callbackReason: callbackReason(existing.results),
+          results: [],
+        },
+      };
+    }
+    return { plan: null, rows: frozenRows };
   }
 
   // New order, or an unsigned order that may change.
@@ -274,6 +301,7 @@ function previewOrder(rows: CheckedRow[], existing: ExistingOrder | undefined): 
   return {
     rows: previewRows,
     plan: {
+      kind: "SAVE",
       lisOrderId: head.orderId,
       patientName: head.patientName,
       mobile: head.mobile,

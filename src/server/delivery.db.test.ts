@@ -120,6 +120,16 @@ describe.skipIf(!RUN)("sign-off delivery against the database", { timeout: 120_0
     expect(await countsFor("TEST-DB-1")).toEqual({ messages: 1, links: 1, tasks: 1 });
   });
 
+  it("a signed order re-sent as critical gets one callback task and no second link", async () => {
+    await importFile(csv([READY]));
+    const critical = [...READY.slice(0, 7), "Ready (critical)", "Dr. Test"];
+    expect(await importFile(csv([critical]))).toMatchObject({ ordersSaved: 1, linksQueued: 0, callbacksCreated: 1 });
+    expect(await importFile(csv([critical]))).toMatchObject({ ordersSaved: 0, callbacksCreated: 0 });
+    expect(await countsFor("TEST-DB-1")).toEqual({ messages: 1, links: 1, tasks: 1 });
+    const order = await db.order.findUniqueOrThrow({ where: { lisOrderId: "TEST-DB-1" } });
+    expect(order.critical).toBe(true);
+  });
+
   it("refuses to commit when the preview is stale", async () => {
     const file = csv([READY]);
     const preview = await previewImport(file);

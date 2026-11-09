@@ -30,3 +30,15 @@ export function linkStatus(link: { expiresAt: Date; revokedAt: Date | null }, no
   if (now >= link.expiresAt) return "EXPIRED";
   return "VALID";
 }
+
+/** Shape check before any database lookup: junk in the URL never reaches a query. */
+export function isWellFormedToken(token: string): boolean {
+  return /^[A-Za-z0-9_-]{43}$/.test(token);
+}
+
+export type LinkCheck = "VALID" | "EXPIRED" | "REVOKED" | "NOT_FOUND";
+
+/** The full check for an opened link: it exists, is not revoked, is not expired. */
+export function checkLink(link: { expiresAt: Date; revokedAt: Date | null } | null, now: Date): LinkCheck {
+  return link ? linkStatus(link, now) : "NOT_FOUND";
+}

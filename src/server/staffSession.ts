@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import {
   createSessionToken,
+  sessionCookieOptions,
   sessionKey,
   STAFF_COOKIE,
   STAFF_SESSION_SECONDS,
@@ -17,13 +18,7 @@ export async function startStaffSession(staffId: string): Promise<void> {
     STAFF_SESSION_SECONDS,
     sessionKey(process.env.SESSION_SECRET),
   );
-  (await cookies()).set(STAFF_COOKIE, token, {
-    httpOnly: true, // page scripts can't read it, so an XSS bug can't steal it
-    secure: process.env.NODE_ENV === "production", // HTTPS only once deployed
-    sameSite: "lax", // not sent on cross-site form posts
-    path: "/",
-    maxAge: STAFF_SESSION_SECONDS,
-  });
+  (await cookies()).set(STAFF_COOKIE, token, sessionCookieOptions(STAFF_SESSION_SECONDS));
 }
 
 export async function endStaffSession(): Promise<void> {

@@ -59,3 +59,10 @@ export const InboxIcon = (p: IconProps) => (
     <path d="M3 13h5l1.5 2.5h5L16 13h5" />
   </Svg>
 );
+
+export const ClockIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </Svg>
+);

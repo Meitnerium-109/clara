@@ -17,6 +17,21 @@ const ISSUER = "clara";
 export const STAFF_COOKIE = "clara_staff";
 export const STAFF_SESSION_SECONDS = 8 * 60 * 60; // one working shift
 
+export const PATIENT_COOKIE = "clara_patient";
+// Idle timeout: middleware re-issues the cookie on every page view, so it
+// only expires after 30 minutes with no activity.
+export const PATIENT_IDLE_SECONDS = 30 * 60;
+
+export function sessionCookieOptions(maxAgeSeconds: number) {
+  return {
+    httpOnly: true, // page scripts can't read it, so a script-injection bug can't steal it
+    secure: process.env.NODE_ENV === "production", // HTTPS only once deployed
+    sameSite: "lax" as const, // not sent on cross-site form posts
+    path: "/",
+    maxAge: maxAgeSeconds,
+  };
+}
+
 const MIN_SECRET_LENGTH = 32;
 
 export function sessionKey(secret: string | undefined): Uint8Array {
