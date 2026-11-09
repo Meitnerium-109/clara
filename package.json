@@ -9,13 +9,15 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "test:db": "RUN_DB_TESTS=1 vitest run src/server"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
     "bcryptjs": "3.0.3",
     "jose": "6.2.13",
     "next": "15.5.29",
+    "papaparse": "5.7.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "zod": "4.6.7"
@@ -24,6 +26,7 @@
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/papaparse": "5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

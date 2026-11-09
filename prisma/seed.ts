@@ -1,10 +1,10 @@
 /**
  * Seeds the demo staff user and sample orders. Safe to run any number of
- * times: every write is an upsert on a unique key, so nothing is duplicated.
+ * times: orders and results are only created when missing, never overwritten,
+ * so a re-seed can't undo what an import changed (e.g. un-sign an order).
  *
- * It only creates the data the LIS would hand us. Report links, messages and
- * callback tasks are created by the real sign-off logic, so the demo exercises
- * that code instead of faking its output.
+ * Signed orders without a report link then go through the real sign-off
+ * delivery (link, message, callback task), the same code an import uses.
  *
  * Run with: npm run db:seed
  */
@@ -14,6 +14,7 @@ import { assessResult, isOrderCritical } from "../src/lib/flags";
 import { parseLisStatus } from "../src/lib/lisStatus";
 import { maskMobile, normaliseMobile } from "../src/lib/mobile";
 import { normalisePatientName } from "../src/lib/patientName";
+import { deliverPendingSignoffs } from "../src/server/delivery";
 import { hashPassword } from "../src/server/password";
 import { SEED_ORDERS, type SeedOrder } from "./seed-data";
 
@@ -77,15 +78,14 @@ async function seedOrder(seed: SeedOrder) {
       critical,
       signedAt: lis.status === "READY" ? new Date() : null,
     },
-    // signedAt is left alone on re-runs, so the original sign-off time is kept.
-    update: { patientId: patient.id, referringDoctor: seed.doctor, status: lis.status, critical },
+    update: {},
   });
 
   for (const r of results) {
     await prisma.result.upsert({
       where: { orderId_parameter: { orderId: order.id, parameter: r.parameter } },
       create: { orderId: order.id, ...r },
-      update: r,
+      update: {},
     });
   }
 
@@ -116,6 +116,9 @@ async function main() {
     prisma.result.count(),
   ]);
   console.log(`Totals in database: ${patients} patients, ${orders} orders, ${results} results`);
+
+  const delivery = await deliverPendingSignoffs(prisma);
+  console.log(`Sign-off delivery: ${delivery.sent} report links queued, ${delivery.callbacks} callback tasks created`);
 }
 
 main()

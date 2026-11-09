@@ -119,3 +119,27 @@ Five failed attempts for one email within 15 minutes lock that email until the w
 ## Server actions for forms
 
 Sign-in and sign-out are React server actions. The browser posts the form straight to server code, with no separate API route to secure. Next.js checks that the request comes from our own origin, which protects against cross-site request forgery. Sign-out is a POST form, not a link, so a link prefetch can't sign someone out.
+
+## Import: preview is pure, commit rebuilds it
+
+The import is split into a pure function, `buildImportPreview(rows, existingOrders)`, and a thin server layer. The pure function decides every outcome (New, Updated, Unchanged or Rejected, with a reason), so all the rules are unit-tested without a database. On Confirm the browser sends the same file again, never the preview, and the server rebuilds the preview from the database as it is now. It commits only if a hash of the plan matches what the staff member saw; otherwise it asks them to check the new preview. So a tampered or out-of-date preview can never be committed.
+
+## Import: each order in its own transaction
+
+Each order is saved in its own transaction (patient, order, results, then delivery). One failing order can't leave a half-saved report, and it doesn't block the rest of the file. A single transaction for the whole file would hold locks for the whole upload and roll back hundreds of good orders over one problem. Inside each transaction the order's status is checked again, so a signed report stays frozen even if two imports overlap.
+
+## Sending exactly once: the database decides
+
+The sign-off message is inserted with `ON CONFLICT DO NOTHING` on its unique `dedupeKey` (`signoff:ORD-71204`). Only if that insert actually adds a row do we create the report link and the callback task, in the same transaction. A re-import, a double click or two servers racing all reach the same unique index, and Postgres lets exactly one insert win. There are two layers: the preview plans nothing for an unchanged file, and the database refuses a second message even if code calls delivery again. Tests cover both, including five simultaneous deliveries against the real database.
+
+## Seed is create-only and uses the real delivery
+
+The seed now only creates missing rows and never overwrites, so re-seeding can't un-sign an order or undo an import. Seeded orders that are already Ready get their links from the same `deliverPendingSignoffs` function, so demo data goes through the production path.
+
+## Database tests run only on request
+
+`npm run test:db` runs the delivery tests against the configured Postgres, because only a real database can prove the unique-index guarantee. They use `TEST-` order IDs and a placeholder mobile and delete everything they create. A plain `npm test` skips them, so it never writes to a database.
+
+## papaparse for CSV
+
+Real LIS exports come from Excel-like tools: quoted commas in Indian numbers, Windows line endings, byte-order marks. papaparse is a widely used, tested parser for these cases, so we don't hand-roll one. It runs only on the server; the screen imports the column list from a separate tiny file, so the parser never reaches the browser.

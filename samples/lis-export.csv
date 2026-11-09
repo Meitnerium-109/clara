@@ -1,0 +1,29 @@
+order_id,patient_name,mobile,parameter,unit,result,reference_range,status,referring_doctor
+ORD-71204,Lakshmi Prasanna K,9000000001,Haemoglobin,g/dL,10.8,12.0-15.5,Ready,Dr. S. Ramanaiah
+ORD-71219,Venkata Rao M,9000000002,LDL cholesterol,mg/dL,142,0-100,Ready,Dr. P. Anitha
+ORD-71233,Farzana Begum,9000000003,Potassium,mmol/L,6.8,3.5-5.1,Ready (critical),Dr. K. Suresh
+ORD-71240,Suryanarayana Rao P,90000 00010,Fasting glucose,mg/dL,168,70-100,Ready,Dr. S. Ramanaiah
+ORD-71240,Suryanarayana Rao P,90000 00010,HbA1c,%,7.8,4.0-5.6,Ready,Dr. S. Ramanaiah
+ORD-71240,Suryanarayana Rao P,90000 00010,Creatinine,mg/dL,1.1,0.7-1.3,Ready,Dr. S. Ramanaiah
+ORD-71241,Padmavathi P,90000 00010,TSH,µIU/mL,3.1,0.4-4.0,Ready,Dr. S. Ramanaiah
+ORD-71241,Padmavathi P,90000 00010,Vitamin D,ng/mL,14,30-100,Ready,Dr. S. Ramanaiah
+ORD-71242,Sai Kiran P,90000 00010,Platelets,/cumm,"2,10,000","1,50,000-4,10,000",Processing,Dr. M. Swarupa Rani
+ORD-71242,Sai Kiran P,90000 00010,Dengue NS1 antigen,,Negative,Negative,Processing,Dr. M. Swarupa Rani
+ORD-71250,Ramana Murthy G,+91 90000 00004,Random glucose,mg/dL,452,70-140,Ready (critical),Dr. K. Suresh
+ORD-71255,Anjali Devi T,09000000005,Haemoglobin,g/dL,6.4,12.0-15.5,Ready,Dr. P. Anitha
+ORD-71255,Anjali Devi T,09000000005,Platelets,/cumm,"1,80,000","1,50,000-4,10,000",Ready,Dr. P. Anitha
+ORD-71260,Srinivas Reddy B,9000000006,Total cholesterol,mg/dL,212,<200,Ready,Dr. B. Nageswara Rao
+ORD-71260,Srinivas Reddy B,9000000006,HDL cholesterol,mg/dL,38,>40,Ready,Dr. B. Nageswara Rao
+ORD-71260,Srinivas Reddy B,9000000006,LDL cholesterol,mg/dL,128,0-100,Ready,Dr. B. Nageswara Rao
+ORD-71262,Mahalakshmi V,9000000007,Creatinine,mg/dL,0.9,0.6-1.1,Ready,Dr. M. Swarupa Rani
+ORD-71262,Mahalakshmi V,9000000007,TSH,µIU/mL,2.2,0.4-4.0,Ready,Dr. M. Swarupa Rani
+ORD-71265,Abdul Rahim S,9000000008,HbA1c,%,6.3,4.0-5.6,Processing,Dr. B. Nageswara Rao
+ORD-71270,Kavya Sri N,9000000009,Haemoglobin,g/dL,12.8,12.0-15.5,Ready,Dr. P. Anitha
+ORD-71270,Kavya Sri N,9000000009,Platelets,/cumm,"98,000","1,50,000-4,10,000",Ready,Dr. P. Anitha
+ORD-71272,Prasad Babu Ch,9000000011,Potassium,mmol/L,2.5,3.5-5.1,Ready (critical),Dr. K. Suresh
+ORD-71272,Prasad Babu Ch,9000000011,Sodium,mmol/L,132,135-145,Ready (critical),Dr. K. Suresh
+ORD-71275,Bhavani Shankar K,9000000012,Vitamin D,ng/mL,32,30-100,Ready,Dr. S. Ramanaiah
+ORD-71275,Bhavani Shankar K,9000000012,Urine sugar,,Nil,Nil,Ready,Dr. S. Ramanaiah
+ORD-71280,Rajeswari D,+91 90000 00013,Fasting glucose,mg/dL,92,70-100,Ready,Dr. P. Anitha
+ORD-71280,Rajeswari D,+91 90000 00013,TSH,µIU/mL,5.6,0.4-4.0,Ready,Dr. P. Anitha
+ORD-71285,Narasimha Rao Y,98765,Creatinine,mg/dL,1.0,0.6-1.2,Ready,Dr. K. Suresh

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { requireStaff } from "@/server/staffSession";
 
@@ -13,6 +14,9 @@ export default async function StaffHomePage() {
       <p className="mt-2 text-ink-muted">
         Signed in as <span className="font-semibold text-ink">{staff.name}</span> ({staff.email})
       </p>
+      <ButtonLink href="/staff/import" className="mt-6">
+        Import LIS results
+      </ButtonLink>
     </Card>
   );
 }
